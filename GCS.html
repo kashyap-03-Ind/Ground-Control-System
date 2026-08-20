@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CanSat GCS - Ground Control Software</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <header id="top-bar" class="glass-panel" role="toolbar" aria-label="Mission Control Toolbar">
+      <div class="bar-left">
+        <div class="mission-logo">
+          <i class="fas fa-satellite"></i>
+          <span class="logo-text">CanSat GCS</span>
+        </div>
+        <div class="connection-indicator" id="connection-indicator" role="status" aria-label="Connection Status">
+          <span class="indicator-dot" id="indicator-dot"></span>
+          <span class="indicator-text" id="indicator-text">DISCONNECTED</span>
+        </div>
+      </div>
+      <div class="bar-center">
+        <button class="ctrl-btn" data-action="start" aria-label="Start Telemetry" title="Start Telemetry">
+          <i class="fas fa-play"></i><span>Start</span>
+        </button>
+        <button class="ctrl-btn" data-action="stop" aria-label="Stop Telemetry" title="Stop Telemetry" disabled>
+          <i class="fas fa-stop"></i><span>Stop</span>
+        </button>
+        <button class="ctrl-btn" data-action="pause" aria-label="Pause Telemetry" title="Pause Telemetry" disabled>
+          <i class="fas fa-pause"></i><span>Pause</span>
+        </button>
+        <button class="ctrl-btn" data-action="resume" aria-label="Resume Telemetry" title="Resume Telemetry" disabled>
+          <i class="fas fa-forward"></i><span>Resume</span>
+        </button>
+        <div class="separator"></div>
+        <button class="ctrl-btn" data-action="connect-serial" aria-label="Connect Serial" title="Connect Serial">
+          <i class="fas fa-plug"></i><span>Serial</span>
+        </button>
+        <button class="ctrl-btn" data-action="disconnect-serial" aria-label="Disconnect" title="Disconnect Serial" disabled>
+          <i class="fas fa-unlink"></i><span>Disconnect</span>
+        </button>
+        <div class="separator"></div>
+        <button class="ctrl-btn" data-action="export-csv" aria-label="Export CSV" title="Export CSV">
+          <i class="fas fa-file-csv"></i><span>CSV</span>
+        </button>
+        <button class="ctrl-btn" data-action="export-graph" aria-label="Export Graph" title="Export Graph PNG">
+          <i class="fas fa-chart-line"></i><span>Export Graph</span>
+        </button>
+        <button class="ctrl-btn" data-action="sync-time" aria-label="Sync PC Time" title="Sync PC Time">
+          <i class="fas fa-clock"></i><span>Sync Time</span>
+        </button>
+        <button class="ctrl-btn" data-action="reset-packets" aria-label="Reset Packets" title="Reset Packets">
+          <i class="fas fa-undo"></i><span>Reset</span>
+        </button>
+        <div class="separator"></div>
+        <button class="ctrl-btn" data-action="dark-mode" aria-label="Toggle Dark Mode" title="Toggle Dark Mode">
+          <i class="fas fa-moon"></i><span>Dark</span>
+        </button>
+        <button class="ctrl-btn" data-action="fullscreen" aria-label="Toggle Fullscreen" title="Toggle Fullscreen">
+          <i class="fas fa-expand"></i><span>Fullscreen</span>
+        </button>
+        <button class="ctrl-btn" data-action="settings" aria-label="Settings" title="Settings">
+          <i class="fas fa-cog"></i><span>Settings</span>
+        </button>
+      </div>
+      <div class="bar-right">
+        <div class="status-badge" id="mission-phase">STANDING BY</div>
+      </div>
+    </header>
+
+    <main id="dashboard">
+      <section id="mission-panel" class="glass-panel" aria-label="Mission Control Panel">
+        <header class="panel-header">
+          <i class="fas fa-terminal"></i>
+          <h2>MISSION CONTROL</h2>
+        </header>
+        <div class="panel-body">
+          <div class="mission-stats">
+            <div class="stat-card">
+              <span class="stat-label">Mission Timer</span>
+              <span class="stat-value" id="mission-timer">00:00:00</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Packets</span>
+              <span class="stat-value" id="packet-counter">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Health</span>
+              <span class="stat-value status-green" id="sat-health">NOMINAL</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Signal</span>
+              <span class="stat-value" id="signal-strength">-45 dBm</span>
+            </div>
+          </div>
+          <div class="mission-commands">
+            <button class="cmd-btn cmd-warning" data-cmd="separation" title="Manual Payload Separation">
+              <i class="fas fa-rocket"></i> Separation
+            </button>
+            <button class="cmd-btn cmd-danger" data-cmd="parachute" title="Deploy Emergency Parachute">
+              <i class="fas fa-umbrella"></i> Parachute
+            </button>
+            <button class="cmd-btn cmd-warning" data-cmd="payload-release" title="Release Payload">
+              <i class="fas fa-cube"></i> Payload Release
+            </button>
+            <button class="cmd-btn cmd-danger" data-cmd="redundant" title="Redundant Activation">
+              <i class="fas fa-exclamation-triangle"></i> Redundant
+            </button>
+            <button class="cmd-btn cmd-info" data-cmd="camera-on" title="Camera ON">
+              <i class="fas fa-video"></i> Cam ON
+            </button>
+            <button class="cmd-btn cmd-info" data-cmd="camera-off" title="Camera OFF">
+              <i class="fas fa-video-slash"></i> Cam OFF
+            </button>
+            <button class="cmd-btn cmd-info" data-cmd="beacon-on" title="Beacon ON">
+              <i class="fas fa-broadcast-tower"></i> Beacon ON
+            </button>
+            <button class="cmd-btn cmd-info" data-cmd="beacon-off" title="Beacon OFF">
+              <i class="fas fa-broadcast-tower"></i> Beacon OFF
+            </button>
+            <button class="cmd-btn cmd-warning" data-cmd="reset" title="Reset Mission">
+              <i class="fas fa-sync"></i> Reset
+            </button>
+            <button class="cmd-btn cmd-danger" data-cmd="abort" title="Abort Mission">
+              <i class="fas fa-skull-crossbones"></i> Abort
+            </button>
+          </div>
+          <div class="command-queue">
+            <div class="queue-header">
+              <span>Command Queue</span>
+              <span class="queue-count" id="queue-count">0</span>
+            </div>
+            <div class="queue-list" id="queue-list">
+              <div class="queue-empty">No pending commands</div>
+            </div>
+          </div>
+          <div class="mission-log">
+            <div class="log-header">Mission Log</div>
+            <div class="log-list" id="mission-log-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="telemetry-panel" class="glass-panel" aria-label="Telemetry Display">
+        <header class="panel-header">
+          <i class="fas fa-microchip"></i>
+          <h2>TELEMETRY</h2>
+          <span class="packet-id" id="current-packet">PACKET: ---</span>
+        </header>
+        <div class="panel-body">
+          <div class="telemetry-tabs">
+            <button class="tab-btn active" data-tab="container">Container</button>
+            <button class="tab-btn" data-tab="payload">Payload</button>
+          </div>
+          <div class="telemetry-content active" id="container-telemetry">
+            <div class="telem-grid">
+              <div class="telem-item" data-key="missionTime"><span class="telem-label">Mission Time</span><span class="telem-value">--:--:--</span></div>
+              <div class="telem-item" data-key="altitude"><span class="telem-label">Altitude</span><span class="telem-value">--- m</span></div>
+              <div class="telem-item" data-key="pressure"><span class="telem-label">Pressure</span><span class="telem-value">--- hPa</span></div>
+              <div class="telem-item" data-key="temperature"><span class="telem-label">Temperature</span><span class="telem-value">--°C</span></div>
+              <div class="telem-item" data-key="humidity"><span class="telem-label">Humidity</span><span class="telem-value">--%</span></div>
+              <div class="telem-item" data-key="voltage"><span class="telem-label">Voltage</span><span class="telem-value">--.- V</span></div>
+              <div class="telem-item" data-key="battery"><span class="telem-label">Battery</span><span class="telem-value">--%</span></div>
+              <div class="telem-item" data-key="latitude"><span class="telem-label">Latitude</span><span class="telem-value">--.----</span></div>
+              <div class="telem-item" data-key="longitude"><span class="telem-label">Longitude</span><span class="telem-value">--.----</span></div>
+              <div class="telem-item" data-key="gpsSatellites"><span class="telem-label">GPS Sats</span><span class="telem-value">--</span></div>
+              <div class="telem-item" data-key="roll"><span class="telem-label">Roll</span><span class="telem-value">--°</span></div>
+              <div class="telem-item" data-key="pitch"><span class="telem-label">Pitch</span><span class="telem-value">--°</span></div>
+              <div class="telem-item" data-key="yaw"><span class="telem-label">Yaw</span><span class="telem-value">--°</span></div>
+              <div class="telem-item" data-key="speed"><span class="telem-label">Speed</span><span class="telem-value">--- m/s</span></div>
+              <div class="telem-item" data-key="descentRate"><span class="telem-label">Descent Rate</span><span class="telem-value">--.- m/s</span></div>
+              <div class="telem-item" data-key="accelX"><span class="telem-label">Accel X</span><span class="telem-value">--.-- m/s²</span></div>
+              <div class="telem-item" data-key="accelY"><span class="telem-label">Accel Y</span><span class="telem-value">--.-- m/s²</span></div>
+              <div class="telem-item" data-key="accelZ"><span class="telem-label">Accel Z</span><span class="telem-value">--.-- m/s²</span></div>
+              <div class="telem-item" data-key="gyro"><span class="telem-label">Gyroscope</span><span class="telem-value">--.-- °/s</span></div>
+              <div class="telem-item" data-key="magnetometer"><span class="telem-label">Magnetometer</span><span class="telem-value">--.-- µT</span></div>
+              <div class="telem-item" data-key="rssi"><span class="telem-label">RSSI</span><span class="telem-value">--- dBm</span></div>
+              <div class="telem-item" data-key="signalStrength"><span class="telem-label">Signal</span><span class="telem-value">---%</span></div>
+              <div class="telem-item" data-key="gpsStatus"><span class="telem-label">GPS Status</span><span class="telem-value status-green">LOCKED</span></div>
+            </div>
+          </div>
+          <div class="telemetry-content" id="payload-telemetry">
+            <div class="telem-grid">
+              <div class="telem-item" data-key="payloadPacket"><span class="telem-label">Packet</span><span class="telem-value">---</span></div>
+              <div class="telem-item" data-key="payloadTemp"><span class="telem-label">Temperature</span><span class="telem-value">--°C</span></div>
+              <div class="telem-item" data-key="payloadHumidity"><span class="telem-label">Humidity</span><span class="telem-value">--%</span></div>
+              <div class="telem-item" data-key="payloadPressure"><span class="telem-label">Pressure</span><span class="telem-value">--- hPa</span></div>
+              <div class="telem-item" data-key="payloadVoltage"><span class="telem-label">Voltage</span><span class="telem-value">--.- V</span></div>
+              <div class="telem-item" data-key="payloadBattery"><span class="telem-label">Battery</span><span class="telem-value">--%</span></div>
+              <div class="telem-item" data-key="payloadStatus"><span class="telem-label">Status</span><span class="telem-value status-green">NOMINAL</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="error-panel" class="glass-panel" aria-label="Error Code Display">
+        <header class="panel-header">
+          <i class="fas fa-exclamation-triangle"></i>
+          <h2>ERROR CODE</h2>
+        </header>
+        <div class="panel-body">
+          <div class="error-display">
+            <div class="error-digits" id="error-digits">
+              <span class="error-digit" data-digit="1">0</span>
+              <span class="error-digit" data-digit="2">0</span>
+              <span class="error-digit" data-digit="3">0</span>
+              <span class="error-digit" data-digit="4">0</span>
+            </div>
+            <div class="error-message" id="error-message">ALL SYSTEMS NOMINAL</div>
+          </div>
+          <div class="error-legend">
+            <div class="legend-item"><span class="legend-digit">D1</span> Descent Rate</div>
+            <div class="legend-item"><span class="legend-digit">D2</span> GPS</div>
+            <div class="legend-item"><span class="legend-digit">D3</span> Payload</div>
+            <div class="legend-item"><span class="legend-digit">D4</span> Parachute</div>
+          </div>
+          <div class="error-log">
+            <div class="error-log-header">Error Log</div>
+            <div class="error-log-list" id="error-log-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="graphs-panel" class="glass-panel" aria-label="Real-Time Graphs">
+        <header class="panel-header">
+          <i class="fas fa-chart-line"></i>
+          <h2>REAL-TIME GRAPHS</h2>
+          <button class="graph-reset-btn" id="graph-reset-btn" title="Reset All Graphs">
+            <i class="fas fa-undo"></i> Reset
+          </button>
+        </header>
+        <div class="panel-body">
+          <div class="graphs-grid">
+            <div class="graph-container">
+              <canvas id="chart-altitude"></canvas>
+              <span class="graph-label">Altitude (m)</span>
+            </div>
+            <div class="graph-container">
+              <canvas id="chart-temperature"></canvas>
+              <span class="graph-label">Temperature (°C)</span>
+            </div>
+            <div class="graph-container">
+              <canvas id="chart-pressure"></canvas>
+              <span class="graph-label">Pressure (hPa)</span>
+            </div>
+            <div class="graph-container">
+              <canvas id="chart-battery"></canvas>
+              <span class="graph-label">Battery (%)</span>
+            </div>
+            <div class="graph-container">
+              <canvas id="chart-voltage"></canvas>
+              <span class="graph-label">Voltage (V)</span>
+            </div>
+            <div class="graph-container">
+              <canvas id="chart-humidity"></canvas>
+              <span class="graph-label">Humidity (%)</span>
+            </div>
+            <div class="graph-container">
+              <canvas id="chart-descent"></canvas>
+              <span class="graph-label">Descent Rate (m/s)</span>
+            </div>
+            <div class="graph-container">
+              <canvas id="chart-speed"></canvas>
+              <span class="graph-label">Speed (m/s)</span>
+            </div>
+            <div class="graph-container">
+              <canvas id="chart-signal"></canvas>
+              <span class="graph-label">Signal Strength (%)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="map-panel" class="glass-panel" aria-label="GPS Tracking Map">
+        <header class="panel-header">
+          <i class="fas fa-map-marked-alt"></i>
+          <h2>GPS TRACKING</h2>
+          <div class="map-controls">
+            <span id="map-distance">Dist: 0.00 km</span>
+            <span id="map-coords">--, --</span>
+            <button id="map-recenter" title="Recenter Map"><i class="fas fa-crosshairs"></i></button>
+          </div>
+        </header>
+        <div class="panel-body">
+          <div id="gps-map"></div>
+        </div>
+      </section>
+
+      <section id="orientation-panel" class="glass-panel" aria-label="Orientation Visualization">
+        <header class="panel-header">
+          <i class="fas fa-cube"></i>
+          <h2>ORIENTATION</h2>
+        </header>
+        <div class="panel-body">
+          <div class="orientation-container">
+            <div class="artificial-horizon" id="artificial-horizon">
+              <div class="horizon-inner" id="horizon-inner">
+                <div class="sky-half"></div>
+                <div class="ground-half"></div>
+                <div class="horizon-line"></div>
+              </div>
+              <div class="horizon-overlay">
+                <span class="roll-value" id="horizon-roll">0°</span>
+                <span class="pitch-value" id="horizon-pitch">0°</span>
+              </div>
+            </div>
+            <div class="orientation-cube" id="orientation-cube">
+              <div class="cube-face cube-front"></div>
+              <div class="cube-face cube-back"></div>
+              <div class="cube-face cube-right"></div>
+              <div class="cube-face cube-left"></div>
+              <div class="cube-face cube-top"></div>
+              <div class="cube-face cube-bottom"></div>
+            </div>
+            <div class="orientation-data">
+              <div class="orient-item"><span>Roll</span><span id="orient-roll" class="telem-value">0°</span></div>
+              <div class="orient-item"><span>Pitch</span><span id="orient-pitch" class="telem-value">0°</span></div>
+              <div class="orient-item"><span>Yaw</span><span id="orient-yaw" class="telem-value">0°</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="video-panel" class="glass-panel" aria-label="Live Video Stream">
+        <header class="panel-header">
+          <i class="fas fa-video"></i>
+          <h2>VIDEO STREAM</h2>
+          <div class="video-controls">
+            <select id="camera-select" aria-label="Select Camera">
+              <option value="">Default Camera</option>
+            </select>
+            <button id="video-start" title="Start Video"><i class="fas fa-play"></i></button>
+            <button id="video-stop" title="Stop Video" disabled><i class="fas fa-stop"></i></button>
+            <button id="video-snapshot" title="Take Snapshot"><i class="fas fa-camera"></i></button>
+            <span id="video-fps" class="fps-indicator">0 FPS</span>
+            <span id="video-recording" class="rec-indicator">OFF</span>
+          </div>
+        </header>
+        <div class="panel-body">
+          <div class="video-container">
+            <video id="live-video" autoplay playsinline></video>
+            <canvas id="video-canvas" style="display:none"></canvas>
+            <div class="video-placeholder" id="video-placeholder">
+              <i class="fas fa-video-slash"></i>
+              <span>Camera Offline</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer id="status-bar" class="glass-panel" role="status" aria-label="System Status Bar">
+      <div class="status-item">
+        <i class="fas fa-clock"></i>
+        <span id="status-clock">--:--:--</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Connection:</span>
+        <span id="status-connection" class="status-danger">DISCONNECTED</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Packets:</span>
+        <span id="status-packets">0</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Mission:</span>
+        <span id="status-mission">STANDING BY</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Version:</span>
+        <span id="status-version">1.0.0</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Operator:</span>
+        <span id="status-operator">OPERATOR-01</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/telemetry.js"></script>
+  <script src="js/errorSystem.js"></script>
+  <script src="js/missionControl.js"></script>
+  <script src="js/graphs.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>
